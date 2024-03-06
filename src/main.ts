@@ -1,34 +1,36 @@
+/* istanbul ignore file */
 /**
  * Some predefined delay values (in milliseconds).
  */
-export enum Delays {
-  Short = 500,
-  Medium = 2000,
-  Long = 5000,
-}
+import 'dotenv/config';
+import mongoose from 'mongoose';
+import server from './server';
+import cron from './cron';
+import config from './config';
+import { ProviderManager } from './scanner/provider-manager';
+import { chainManagerProvider } from './scanner/chain-manager-provider';
+import { setGlobalOptions, Severity } from '@typegoose/typegoose';
 
-/**
- * Returns a Promise<string> that resolves after a given time.
- *
- * @param {string} name - A name.
- * @param {number=} [delay=Delays.Medium] - A number of milliseconds to delay resolution of the Promise.
- * @returns {Promise<string>}
- */
-function delayedHello(
-  name: string,
-  delay: number = Delays.Medium,
-): Promise<string> {
-  return new Promise((resolve: (value?: string) => void) =>
-    setTimeout(() => resolve(`Hello, ${name}`), delay),
-  );
-}
+setGlobalOptions({
+  options: {
+    allowMixed: Severity.ALLOW,
+  },
+});
 
-// Please see the comment in the .eslintrc.json file about the suppressed rule!
-// Below is an example of how to use ESLint errors suppression. You can read more
-// at https://eslint.org/docs/latest/user-guide/configuring/rules#disabling-rules
+const start = async (): Promise<void> => {
+  try {
+    const globalConfig = config.getGlobalConfig();
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export async function greeter(name: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-  // The name parameter should be of type string. Any is used only to trigger the rule.
-  return await delayedHello(name, Delays.Long);
-}
+    await mongoose.connect(globalConfig.mongoUri);
+
+    ProviderManager.Init();
+    chainManagerProvider.init();
+    server.run();
+    cron.run();
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
+};
+
+start();

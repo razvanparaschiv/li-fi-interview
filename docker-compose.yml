@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb_container
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: lifi
+      MONGO_INITDB_ROOT_PASSWORD: lifi
+    networks:
+      - lifi-network
+  app:
+    build:
+      context: .
+    container_name: lifi-assignment
+    ports:
+      - '3000:3000' # Map the port your app listens on, adjust if necessary
+    depends_on:
+      - mongodb # Ensures MongoDB is started before your app starts
+    env_file:
+      - .env
+    networks:
+      - lifi-network
+
+networks:
+  lifi-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
